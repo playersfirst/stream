@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KapStream</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Ensure iframe fills its container and is responsive */
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio (height / width * 100%) */
+            background-color: black;
+            border-radius: 0.75rem; /* rounded-lg */
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* shadow-xl */
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
+
+    <header class="text-center mb-8">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-400 mb-2">
+            KapStream
+        </h1>
+
+        <!-- Content Type Selection Buttons -->
+        <div class="flex justify-center gap-4 mb-8">
+            <button id="movie-button"
+                class="py-2 px-6 rounded-full font-semibold transition-all duration-300 bg-indigo-600 text-white shadow-lg">
+                Movies
+            </button>
+            <button id="tv-button"
+                class="py-2 px-6 rounded-full font-semibold transition-all duration-300 bg-gray-700 text-gray-300 hover:bg-gray-600">
+                TV Series
+            </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="max-w-md mx-auto mb-8">
+            <input type="text" id="search-input"
+                placeholder="Search for movies..."
+                class="w-full p-3 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200">
+        </div>
+    </header>
+
+    <div id="error-message" class="hidden bg-red-600 p-4 rounded-lg shadow-md mb-6 text-center">
+        <p class="font-semibold"></p>
+    </div>
+
+    <!-- Main content area for movie/TV details or grid -->
+    <div id="content-display">
+        <!-- Content will be dynamically inserted here by JavaScript -->
+    </div>
+
+    <script>
+        // IMPORTANT: Replace with your actual TMDB API Key.
+        // You can get one for free from https://www.themoviedb.org/settings/api
+        const TMDB_API_KEY = '47d9d5e21090f4de14010605a2f5d5ca';
+
+        // Base URL for TMDB images
+        const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+        const TMDB_POSTER_PLACEHOLDER = 'https://placehold.co/500x750/cccccc/333333?text=No+Poster';
+
+        // DOM Elements
+        const contentDisplay = document.getElementById('content-display');
+        const searchInput = document.getElementById('search-input');
+        const movieButton = document.getElementById('movie-button');
+        const tvButton = document.getElementById('tv-button');
+        const errorMessageDiv = document.getElementById('error-message');
+        const errorMessageP = errorMessageDiv.querySelector('p');
+
+        // State variables
+        let contentList = [];
+        let selectedContent = null;
+        let loading = true;
+        let error = null;
+        let page = 1;
+        let hasMore = true;
+        let searchQuery = '';
+        let contentType = 'movie'; // 'movie' or 'tv'
+
+        // New state variables for TV series episode selection
+        let currentSelectedSeason = 1;
+        let currentSelectedEpisode = 1;
+
+        // Function to display error messages
+        function displayError(message) {
+            error = message;
+            errorMessageP.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+        }
+
+        // Function to hide error messages
+        function hideError() {
+            error = null;
+            errorMessageDiv.classList.add('hidden');
+            errorMessageP.textContent = '';
+        }
+
+        // Function to render loading spinner
+        function renderLoadingSpinner(message) {
+            return `
+                <div class="flex justify-center items-center mt-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-400"></div>
+                    <span class="ml-4 text-xl text-gray-300">${message}</span>
+                </div>
+            `;
+        }
+
+        // Function to fetch content (either popular movies/TV or search results)
+        async function fetchContent() {
+            if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY') {
+                displayError("Please replace 'YOUR_TMDB_API_KEY' with your actual TMDB API key.");
+                loading = false;
+                renderContent(); // Re-render to show error
+                return;
+            }
+
+            loading = true;
+            hideError();
+            renderContent(); // Show loading spinner
+
+            let apiUrl = '';
+            if (searchQuery) {
+                apiUrl = `https://api.themoviedb.org/3/search/${contentType}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}&page=${page}`;
+            } else {
+                apiUrl = `https://api.themoviedb.org/3/${contentType}/popular?api_key=${TMDB_API_KEY}&page=${page}`;
+            }
+
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                contentList = (page === 1) ? data.results : [...contentList, ...data.results];
+                hasMore = data.page < data.total_pages;
+            } catch (err) {
+                displayError(`Failed to fetch ${contentType}s: ${err.message}. Please check your API key and network connection.`);
+            } finally {
+                loading = false;
+                renderContent(); // Re-render with fetched data or error
+            }
+        }
+
+        // Function to fetch full content details and IMDB ID
+        async function fetchContentDetails(contentId, type) {
+            loading = true;
+            hideError();
+            renderContent(); // Show loading spinner
+
+            try {
+                const detailsResponse = await fetch(
+                    `https://api.themoviedb.org/3/${type}/${contentId}?api_key=${TMDB_API_KEY}`
+                );
+                if (!detailsResponse.ok) {
+                    throw new Error(`HTTP error! status: ${detailsResponse.status}`);
+                }
+                const detailsData = await detailsResponse.json();
+
+                const externalIdsResponse = await fetch(
+                    `https://api.themoviedb.org/3/${type}/${contentId}/external_ids?api_key=${TMDB_API_KEY}`
+                );
+                if (!externalIdsResponse.ok) {
+                    throw new Error(`HTTP error! status: ${externalIdsResponse.status}`);
+                }
+                const externalIdsData = await externalIdsResponse.json();
+
+                selectedContent = {
+                    ...detailsData,
+                    imdb_id: externalIdsData.imdb_id,
+                    content_type: type,
+                };
+
+                // For TV series, initialize selected season and episode
+                if (type === 'tv' && selectedContent.seasons && selectedContent.seasons.length > 0) {
+                    // Find the first season that is not 'Specials' (season_number 0) and has episodes
+                    const firstValidSeason = selectedContent.seasons.find(s => s.season_number > 0 && s.episode_count > 0);
+                    currentSelectedSeason = firstValidSeason ? firstValidSeason.season_number : 1;
+                    currentSelectedEpisode = 1; // Always start with episode 1
+                } else if (type === 'tv') {
+                    // Fallback if no seasons or episodes found, though unlikely for popular series
+                    currentSelectedSeason = 1;
+                    currentSelectedEpisode = 1;
+                }
+
+
+                // Log the IMDB ID for debugging
+                console.log('Fetched IMDB ID:', selectedContent.imdb_id);
+
+            } catch (err) {
+                displayError(`Failed to fetch ${type} details: ${err.message}`);
+            } finally {
+                loading = false;
+                renderContent(); // Re-render with details or error
+            }
+        }
+
+        // Function to create a content card HTML string
+        function createContentCard(content) {
+            const title = content.title || content.name;
+            const releaseDate = content.release_date || content.first_air_date;
+            const year = releaseDate ? new Date(releaseDate).getFullYear() : '';
+            const posterPath = content.poster_path ? `${TMDB_IMAGE_BASE_URL}${content.poster_path}` : TMDB_POSTER_PLACEHOLDER;
+
+            return `
+                <div class="bg-gray-800 rounded-xl shadow-lg overflow-hidden cursor-pointer transform transition-transform hover:scale-105 hover:shadow-xl group"
+                     data-id="${content.id}" data-type="${content.media_type || contentType}">
+                    <img src="${posterPath}" alt="${title}"
+                         class="w-full h-auto object-cover rounded-t-xl group-hover:opacity-90 transition-opacity"
+                         onerror="this.onerror=null;this.src='${TMDB_POSTER_PLACEHOLDER}';">
+                    <div class="p-3 text-center">
+                        <h3 class="text-lg font-semibold text-gray-100 truncate group-hover:text-indigo-300 transition-colors">
+                            ${title}
+                        </h3>
+                        ${year ? `<p class="text-sm text-gray-400">${year}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to render the main content display
+        function renderContent() {
+            let html = '';
+
+            if (selectedContent) {
+                // Render detail view
+                const title = selectedContent.title || selectedContent.name;
+                const releaseDate = selectedContent.release_date || selectedContent.first_air_date;
+                const releaseDateFormatted = releaseDate ? new Date(releaseDate).toLocaleDateString() : '';
+                const posterPath = selectedContent.poster_path ? `${TMDB_IMAGE_BASE_URL}${selectedContent.poster_path}` : TMDB_POSTER_PLACEHOLDER;
+
+                let embedSrc = '';
+                if (selectedContent.imdb_id) {
+                    if (selectedContent.content_type === 'movie') {
+                        embedSrc = `https://vidsrc.me/embed/${selectedContent.imdb_id}`;
+                    } else {
+                        // For TV series, use selected season and episode
+                        embedSrc = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
+                    }
+                    console.log('vidsrc.me Embed URL:', embedSrc); // Log embed URL
+                }
+
+                // Generate season options for TV series
+                let seasonOptions = '';
+                if (selectedContent.content_type === 'tv' && selectedContent.seasons) {
+                    selectedContent.seasons.forEach(season => {
+                        // Exclude season 0 (Specials) for now unless specifically requested
+                        if (season.season_number > 0) {
+                            const selected = season.season_number === currentSelectedSeason ? 'selected' : '';
+                            seasonOptions += `<option value="${season.season_number}" ${selected}>Season ${season.season_number}</option>`;
+                        }
+                    });
+                }
+
+                // Generate episode options for TV series
+                let episodeOptions = '';
+                if (selectedContent.content_type === 'tv' && selectedContent.seasons) {
+                    const currentSeasonData = selectedContent.seasons.find(s => s.season_number === currentSelectedSeason);
+                    if (currentSeasonData && currentSeasonData.episode_count > 0) {
+                        for (let i = 1; i <= currentSeasonData.episode_count; i++) {
+                            const selected = i === currentSelectedEpisode ? 'selected' : '';
+                            episodeOptions += `<option value="${i}" ${selected}>Episode ${i}</option>`;
+                        }
+                    }
+                }
+
+
+                html = `
+                    <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl shadow-2xl p-6 relative">
+                        <button id="back-button"
+                            class="absolute top-4 right-4 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            aria-label="Back to content list">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+                        <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+                            <img src="${posterPath}" alt="${title}"
+                                 class="w-48 h-auto rounded-lg shadow-lg flex-shrink-0"
+                                 onerror="this.onerror=null;this.src='${TMDB_POSTER_PLACEHOLDER}';">
+                            <div class="text-center md:text-left">
+                                <h2 class="text-3xl sm:text-4xl font-bold text-indigo-300 mb-2">
+                                    ${title}
+                                </h2>
+                                ${releaseDateFormatted ? `<p class="text-gray-400 text-lg mb-2">Release Date: ${releaseDateFormatted}</p>` : ''}
+                                <p class="text-gray-300 text-base sm:text-lg mb-4 leading-relaxed">
+                                    ${selectedContent.overview || "No overview available."}
+                                </p>
+                            </div>
+                        </div>
+                        ${selectedContent.imdb_id ? `
+                            <div class="mt-8">
+                                <h3 class="text-2xl font-semibold text-indigo-300 mb-4 text-center">Watch Now</h3>
+
+                                ${selectedContent.content_type === 'tv' ? `
+                                    <div class="flex justify-center gap-4 mb-4">
+                                        <div class="flex items-center gap-2">
+                                            <label for="season-select" class="text-gray-300">Season:</label>
+                                            <select id="season-select" class="p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                ${seasonOptions}
+                                            </select>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <label for="episode-select" class="text-gray-300">Episode:</label>
+                                            <select id="episode-select" class="p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                ${episodeOptions}
+                                            </select>
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                <div class="video-container">
+                                    <iframe id="vidsrc-iframe" src="${embedSrc}"
+                                            title="${title} - vidsrc.me embed"
+                                            allowFullScreen></iframe>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-4 text-center">
+                                    Streaming provided by <a href="https://vidsrc.me/" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">vidsrc.me</a>
+                                </p>
+                            </div>
+                        ` : `
+                            <div class="mt-8 text-center text-gray-400">
+                                ${loading ? renderLoadingSpinner('Loading stream info...') : `<p>IMDB ID not found for this ${selectedContent.content_type || 'item'}, cannot embed stream. This could mean the content is not available on TMDB with an IMDB ID, or vidsrc.me does not host it.</p>`}
+                            </div>
+                        `}
+                    </div>
+                `;
+            } else {
+                // Render grid view
+                if (contentList.length === 0 && !loading && !error) {
+                    if (searchQuery) {
+                        html += `<p class="text-center text-gray-400 text-xl mt-12">No ${contentType === 'movie' ? 'movies' : 'TV series'} found for "${searchQuery}". Try a different search!</p>`;
+                    } else {
+                        html += `<p class="text-center text-gray-400 text-xl mt-12">No popular ${contentType === 'movie' ? 'movies' : 'TV series'} available.</p>`;
+                    }
+                } else {
+                    html += `
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+                            ${contentList.map(createContentCard).join('')}
+                        </div>
+                    `;
+                }
+
+                if (loading) {
+                    html += renderLoadingSpinner(`Loading more ${contentType}s...`);
+                }
+
+                if (hasMore && !loading && contentList.length > 0) {
+                    html += `
+                        <div class="text-center mt-8">
+                            <button id="load-more-button"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                Load More
+                            </button>
+                        </div>
+                    `;
+                } else if (!hasMore && !loading && contentList.length > 0) {
+                    html += `
+                        <p class="text-center text-gray-400 mt-8">You've reached the end of the ${searchQuery ? 'search results' : `popular ${contentType} list`}.</p>
+                    `;
+                }
+            }
+
+            contentDisplay.innerHTML = html;
+
+            // Add event listeners after rendering
+            if (selectedContent) {
+                document.getElementById('back-button').addEventListener('click', () => {
+                    selectedContent = null;
+                    renderContent();
+                });
+
+                // Add event listeners for TV series season/episode selectors
+                if (selectedContent.content_type === 'tv') {
+                    const seasonSelect = document.getElementById('season-select');
+                    const episodeSelect = document.getElementById('episode-select');
+                    const vidsrcIframe = document.getElementById('vidsrc-iframe');
+
+                    if (seasonSelect) {
+                        seasonSelect.addEventListener('change', (event) => {
+                            currentSelectedSeason = parseInt(event.target.value);
+                            currentSelectedEpisode = 1; // Reset episode to 1 when season changes
+                            // Update episode options based on new season
+                            const currentSeasonData = selectedContent.seasons.find(s => s.season_number === currentSelectedSeason);
+                            let newEpisodeOptions = '';
+                            if (currentSeasonData && currentSeasonData.episode_count > 0) {
+                                for (let i = 1; i <= currentSeasonData.episode_count; i++) {
+                                    newEpisodeOptions += `<option value="${i}">Episode ${i}</option>`;
+                                }
+                            }
+                            episodeSelect.innerHTML = newEpisodeOptions; // Update dropdown
+                            // Update iframe src
+                            vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
+                            console.log('vidsrc.me Embed URL (Season Change):', vidsrcIframe.src);
+                        });
+                    }
+
+                    if (episodeSelect) {
+                        episodeSelect.addEventListener('change', (event) => {
+                            currentSelectedEpisode = parseInt(event.target.value);
+                            // Update iframe src
+                            vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
+                            console.log('vidsrc.me Embed URL (Episode Change):', vidsrcIframe.src);
+                        });
+                    }
+                }
+
+            } else {
+                document.querySelectorAll('.group[data-id]').forEach(card => {
+                    card.addEventListener('click', (event) => {
+                        const id = event.currentTarget.dataset.id;
+                        const type = event.currentTarget.dataset.type;
+                        fetchContentDetails(id, type);
+                    });
+                });
+                if (hasMore && !loading && contentList.length > 0) {
+                    document.getElementById('load-more-button').addEventListener('click', () => {
+                        if (!loading && hasMore) {
+                            page++;
+                            fetchContent();
+                        }
+                    });
+                }
+            }
+        }
+
+        // Event Listeners for main buttons and search
+        movieButton.addEventListener('click', () => {
+            if (contentType !== 'movie') {
+                contentType = 'movie';
+                page = 1;
+                searchQuery = '';
+                contentList = [];
+                hasMore = true;
+                movieButton.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+                movieButton.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                tvButton.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+                tvButton.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                fetchContent();
+            }
+        });
+
+        tvButton.addEventListener('click', () => {
+            if (contentType !== 'tv') {
+                contentType = 'tv';
+                page = 1;
+                searchQuery = '';
+                contentList = [];
+                hasMore = true;
+                tvButton.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+                tvButton.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                movieButton.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+                movieButton.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                fetchContent();
+            }
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            page = 1;
+            contentList = [];
+            hasMore = true;
+            fetchContent();
+        });
+
+        // Initial fetch on page load
+        window.onload = function() {
+            fetchContent();
+        };
+
+    </script>
+</body>
+</html>
