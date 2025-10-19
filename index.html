@@ -250,12 +250,12 @@
                 let embedSrc = '';
                 if (selectedContent.imdb_id) {
                     if (selectedContent.content_type === 'movie') {
-                        embedSrc = `https://vsrc.su/embed/${selectedContent.imdb_id}`;
+                        embedSrc = `https://vidsrcme.su/embed/${selectedContent.imdb_id}`;
                     } else {
                         // For TV series, use selected season and episode
-                        embedSrc = `https://vsrc.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
+                        embedSrc = `https://vidsrcme.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
                     }
-                    console.log('vsrc.su Embed URL:', embedSrc); // Log embed URL
+                    console.log('vidsrcme.su Embed URL:', embedSrc); // Log embed URL
                 }
 
                 // Generate season options for TV series
@@ -329,16 +329,16 @@
 
                                 <div class="video-container">
                                     <iframe id="vidsrc-iframe" src="${embedSrc}"
-                                            title="${title} - vsrc.su embed"
+                                            title="${title} - vidsrcme.su embed"
                                             allowFullScreen></iframe>
                                 </div>
                                 <p class="text-sm text-gray-500 mt-4 text-center">
-                                    Streaming provided by <a href="https://vsrc.su/" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">vsrc.su</a>
+                                    Streaming provided by <a href="https://vidsrcme.su/" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">vidsrcme.su</a>
                                 </p>
                             </div>
                         ` : `
                             <div class="mt-8 text-center text-gray-400">
-                                ${loading ? renderLoadingSpinner('Loading stream info...') : `<p>IMDB ID not found for this ${selectedContent.content_type || 'item'}, cannot embed stream. This could mean the content is not available on TMDB with an IMDB ID, or vsrc.su does not host it.</p>`}
+                                ${loading ? renderLoadingSpinner('Loading stream info...') : `<p>IMDB ID not found for this ${selectedContent.content_type || 'item'}, cannot embed stream. This could mean the content is not available on TMDB with an IMDB ID, or vidsrcme.su does not host it.</p>`}
                             </div>
                         `}
                     </div>
@@ -408,8 +408,8 @@
                             }
                             episodeSelect.innerHTML = newEpisodeOptions; // Update dropdown
                             // Update iframe src
-                            vidsrcIframe.src = `https://vsrc.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
-                            console.log('vsrc.su Embed URL (Season Change):', vidsrcIframe.src);
+                            vidsrcIframe.src = `https://vidsrcme.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
+                            console.log('vidsrcme.su Embed URL (Season Change):', vidsrcIframe.src);
                         });
                     }
 
@@ -417,8 +417,8 @@
                         episodeSelect.addEventListener('change', (event) => {
                             currentSelectedEpisode = parseInt(event.target.value);
                             // Update iframe src
-                            vidsrcIframe.src = `https://vsrc.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
-                            console.log('vsrc.su Embed URL (Episode Change):', vidsrcIframe.src);
+                            vidsrcIframe.src = `https://vidsrcme.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
+                            console.log('vidsrcme.su Embed URL (Episode Change):', vidsrcIframe.src);
                         });
                     }
                 }
