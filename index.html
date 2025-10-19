@@ -259,16 +259,17 @@ console.log('TMDB Seasons Data:', detailsData.seasons);
                     console.log('vidsrcme.su Embed URL:', embedSrc); // Log embed URL
                 }
 
+
                 // Generate season options for TV series
                 let seasonOptions = '';
                 if (selectedContent.content_type === 'tv' && selectedContent.seasons) {
-                    selectedContent.seasons.forEach(season => {
-                        // Exclude season 0 (Specials) for now unless specifically requested
-                        if (season.season_number > 0) {
-                            const selected = season.season_number === currentSelectedSeason ? 'selected' : '';
-                            seasonOptions += `<option value="${season.season_number}" ${selected}>Season ${season.season_number}</option>`;
-                        }
-                    });
+                    // Find the highest season number in TMDB data
+                    const maxSeason = Math.max(...selectedContent.seasons.filter(s => s.season_number > 0).map(s => s.season_number));
+                    // Generate sequential options from 1 to maxSeason
+                    for (let i = 1; i <= maxSeason; i++) {
+                        const selected = i === currentSelectedSeason ? 'selected' : '';
+                        seasonOptions += `<option value="${i}" ${selected}>Season ${i}</option>`;
+                    }
                 }
 
                 // Generate episode options for TV series
