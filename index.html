@@ -174,7 +174,6 @@
                     throw new Error(`HTTP error! status: ${detailsResponse.status}`);
                 }
                 const detailsData = await detailsResponse.json();
-console.log('TMDB Seasons Data:', detailsData.seasons);
 
                 const externalIdsResponse = await fetch(
                     `https://api.themoviedb.org/3/${type}/${contentId}/external_ids?api_key=${TMDB_API_KEY}`
@@ -203,8 +202,6 @@ console.log('TMDB Seasons Data:', detailsData.seasons);
                 }
 
 
-                // Log the IMDB ID for debugging
-                console.log('Fetched IMDB ID:', selectedContent.imdb_id);
 
             } catch (err) {
                 displayError(`Failed to fetch ${type} details: ${err.message}`);
@@ -256,7 +253,6 @@ console.log('TMDB Seasons Data:', detailsData.seasons);
                         // For TV series, use selected season and episode
                         embedSrc = `https://vidsrcme.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
                     }
-                    console.log('vidsrcme.su Embed URL:', embedSrc); // Log embed URL
                 }
 
 
@@ -411,7 +407,6 @@ console.log('TMDB Seasons Data:', detailsData.seasons);
                             episodeSelect.innerHTML = newEpisodeOptions; // Update dropdown
                             // Update iframe src
                             vidsrcIframe.src = `https://vidsrcme.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
-                            console.log('vidsrcme.su Embed URL (Season Change):', vidsrcIframe.src);
                         });
                     }
 
@@ -420,7 +415,6 @@ console.log('TMDB Seasons Data:', detailsData.seasons);
                             currentSelectedEpisode = parseInt(event.target.value);
                             // Update iframe src
                             vidsrcIframe.src = `https://vidsrcme.su/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
-                            console.log('vidsrcme.su Embed URL (Episode Change):', vidsrcIframe.src);
                         });
                     }
                 }
