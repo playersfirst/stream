@@ -14,8 +14,8 @@
     <header class="text-center mb-8">
         <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-400 mb-2">KapStream</h1>
         <div class="flex justify-center gap-4 mb-8">
-            <button id="movie-button" class="py-2 px-6 rounded-full font-semibold bg-indigo-600 shadow-lg">Movies</button>
-            <button id="tv-button" class="py-2 px-6 rounded-full font-semibold bg-gray-700 text-gray-300 hover:bg-gray-600">TV Series</button>
+            <button id="movie-button" onclick="setType('movie')" class="py-2 px-6 rounded-full font-semibold bg-indigo-600 shadow-lg transition-all">Movies</button>
+            <button id="tv-button" onclick="setType('tv')" class="py-2 px-6 rounded-full font-semibold bg-gray-700 text-gray-300 hover:bg-gray-600 transition-all">TV Series</button>
         </div>
         <input type="text" id="search-input" placeholder="Search..." class="max-w-md w-full p-3 rounded-lg bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
     </header>
@@ -26,6 +26,13 @@
         let contentList = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1;
 
         const $ = id => document.getElementById(id);
+
+        function setType(t) {
+            type = t; page = 1;
+            $('movie-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t === 'movie' ? 'bg-indigo-600 shadow-lg' : 'bg-gray-700 text-gray-300'}`;
+            $('tv-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t === 'tv' ? 'bg-indigo-600 shadow-lg' : 'bg-gray-700 text-gray-300'}`;
+            fetchContent();
+        }
 
         async function fetchContent() {
             loading = true; render();
@@ -60,9 +67,7 @@
 
         async function changeSeason(val) {
             curS = val === 'custom' ? parseInt(prompt("Season:")) : parseInt(val);
-            curE = 1;
-            await updateMaxEp();
-            render();
+            curE = 1; await updateMaxEp(); render();
         }
 
         function render() {
@@ -78,10 +83,10 @@
                     <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 relative">
                         <button onclick="selected=null;render()" class="absolute top-4 right-4 bg-indigo-600 p-2 rounded-full shadow-lg">✕</button>
                         <div class="flex flex-col md:flex-row gap-6 mb-8">
-                            <img src="${s.poster_path ? IMG_URL+s.poster_path : PLCHOLDER}" class="w-48 rounded-lg h-full">
+                            <img src="${s.poster_path ? IMG_URL+s.poster_path : PLCHOLDER}" class="w-48 rounded-lg">
                             <div class="text-center md:text-left">
                                 <h2 class="text-3xl font-bold text-indigo-300">${s.title || s.name}</h2>
-                                <p class="mt-4 text-gray-300">${s.overview || "No overview."}</p>
+                                <p class="mt-4 text-gray-300 line-clamp-6">${s.overview || "No overview."}</p>
                             </div>
                         </div>
                         <div class="text-center">
@@ -101,7 +106,7 @@
                 </div>`).join('');
                 $('content-display').innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-6">${cards}</div>
                 ${loading ? '<div class="text-center mt-8 animate-spin text-3xl">◌</div>' : ''}
-                ${hasMore && !loading ? '<div class="text-center mt-8"><button onclick="page++;fetchContent()" class="bg-indigo-600 px-6 py-2 rounded-full">More</button></div>' : ''}`;
+                ${hasMore && !loading ? '<div class="text-center mt-8"><button onclick="page++;fetchContent()" class="bg-indigo-600 px-6 py-2 rounded-full shadow-md">More</button></div>' : ''}`;
             }
         }
 
@@ -114,8 +119,6 @@
             }
         };
 
-        $('movie-button').onclick = () => { type='movie'; page=1; fetchContent(); };
-        $('tv-button').onclick = () => { type='tv'; page=1; fetchContent(); };
         $('search-input').oninput = e => { query=e.target.value; page=1; fetchContent(); };
         window.onload = fetchContent;
     </script>
