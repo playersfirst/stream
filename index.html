@@ -43,7 +43,7 @@
                 const res = await fetch(url); const data = await res.json(); 
                 list = page === 1 ? data.results : [...list, ...data.results]; 
                 hasMore = data.page < data.total_pages; 
-            } catch (e) { err("Connection error. Check API key."); }
+            } catch (e) { err("Connection error."); }
             loading = false; render();
         }
 
@@ -57,7 +57,7 @@
                 selected = {...d, imdb_id: ex.imdb_id, content_type: t};
                 if (t === 'tv') { 
                     const first = d.seasons?.find(s => s.season_number > 0);
-                    curS = first ? first.season_number : 1;
+                    curS = first ? first.season_number : 1; curE = 1;
                     await updateMaxEp(); 
                 }
             } catch { err("Failed to load details."); }
@@ -65,6 +65,7 @@
         }
 
         async function updateMaxEp() {
+            if (!selected || selected.content_type !== 'tv') return;
             try {
                 const res = await fetch(`https://api.themoviedb.org/3/tv/${selected.id}/season/${curS}?api_key=${API_KEY}`).then(r => r.json());
                 maxE = res.episodes ? res.episodes.length : 1;
@@ -72,7 +73,7 @@
         }
 
         async function changeS(v) { 
-            if(v==='custom') { const p = prompt("Season:"); if(p) curS = parseInt(p); } else curS = parseInt(v);
+            curS = v === 'custom' ? parseInt(prompt("Season:")) : parseInt(v);
             curE = 1; await updateMaxEp(); render(); 
         }
 
@@ -80,7 +81,6 @@
             if (selected) {
                 const s = selected, isTV = s.content_type === 'tv';
                 const date = isTV ? s.first_air_date : s.release_date;
-                const year = date ? `(${date.split('-')[0]})` : '';
                 const fullDate = date ? new Date(date).toLocaleDateString() : 'Unknown';
                 const src = isTV ? `https://vidsrc.me/embed/tv?imdb=${s.imdb_id}&season=${curS}&episode=${curE}&ds_lang=en` : `https://vidsrc.me/embed/${s.imdb_id}?ds_lang=en`;
                 let sOpt = '', eOpt = '';
@@ -92,9 +92,9 @@
                     <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 relative">
                         <button onclick="selected=null;render()" class="absolute top-4 right-4 bg-indigo-600 p-2 rounded-full shadow-lg">✕</button>
                         <div class="flex flex-col md:flex-row gap-6 mb-8">
-                            <img src="${s.poster_path?IMG_URL+s.poster_path:PLCHOLDER}" class="w-48 rounded-lg">
+                            <img src="${s.poster_path?IMG_URL+s.poster_path:PLCHOLDER}" class="w-48 rounded-lg h-full">
                             <div class="text-center md:text-left">
-                                <h2 class="text-3xl font-bold text-indigo-300">${s.title || s.name} <span class="text-gray-500">${year}</span></h2>
+                                <h2 class="text-3xl font-bold text-indigo-300">${s.title || s.name}</h2>
                                 <p class="text-gray-400 my-2">Release Date: ${fullDate}</p>
                                 <p class="text-gray-300 line-clamp-6">${s.overview || "No overview available."}</p>
                             </div>
@@ -112,10 +112,13 @@
             } else {
                 let cards = list.map(c => {
                     const d = type === 'tv' ? c.first_air_date : c.release_date;
-                    const y = d ? `(${d.split('-')[0]})` : '';
+                    const y = d ? d.split('-')[0] : '';
                     return `<div onclick="fetchDetails(${c.id},'${type}')" class="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:scale-105 transition shadow-lg">
                         <img src="${c.poster_path?IMG_URL+c.poster_path:PLCHOLDER}" class="w-full">
-                        <div class="p-3 text-center"><div class="truncate font-semibold">${c.title || c.name}</div><div class="text-xs text-gray-500 mt-1">${y}</div></div>
+                        <div class="p-3 text-center">
+                            <div class="truncate font-semibold text-sm sm:text-base">${c.title || c.name}</div>
+                            <div class="text-lg font-bold text-indigo-400 mt-1">${y}</div>
+                        </div>
                     </div>`
                 }).join('');
                 $('content-display').innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-6">${cards}</div>
@@ -125,6 +128,7 @@
         }
 
         window.nextEp = async () => {
+            if (!selected || selected.content_type !== 'tv') return;
             if (curE < maxE) { curE++; render(); }
             else { 
                 const nS = selected.seasons.find(s => s.season_number == curS + 1); 
