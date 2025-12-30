@@ -19,26 +19,31 @@
         </div>
         <input type="text" id="search-input" placeholder="Search..." class="max-w-md w-full p-3 rounded-lg bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
     </header>
+    <div id="err-box" class="hidden bg-red-600 p-4 rounded-lg mb-6 text-center"></div>
     <div id="content-display"></div>
 
     <script>
         const API_KEY = '47d9d5e21090f4de14010605a2f5d5ca', IMG_URL = 'https://image.tmdb.org/t/p/w500', PLCHOLDER = 'https://placehold.co/500x750?text=No+Poster';
-        let contentList = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1;
+        let list = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1;
 
         const $ = id => document.getElementById(id);
-        const getYear = d => d ? `(${d.split('-')[0]})` : '';
+        const err = (m) => { if(m) { $('err-box').innerText = m; $('err-box').classList.remove('hidden'); } else $('err-box').classList.add('hidden'); };
 
         function setType(t) {
             type = t; page = 1;
-            $('movie-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t === 'movie' ? 'bg-indigo-600 shadow-lg' : 'bg-gray-700 text-gray-300'}`;
-            $('tv-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t === 'tv' ? 'bg-indigo-600 shadow-lg' : 'bg-gray-700 text-gray-300'}`;
+            $('movie-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t==='movie'?'bg-indigo-600 shadow-lg':'bg-gray-700 text-gray-300'}`;
+            $('tv-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t==='tv'?'bg-indigo-600 shadow-lg':'bg-gray-700 text-gray-300'}`;
             fetchContent();
         }
 
         async function fetchContent() {
-            loading = true; render();
+            loading = true; render(); err(null);
             const url = query ? `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${page}` : `https://api.themoviedb.org/3/${type}/popular?api_key=${API_KEY}&page=${page}`;
-            try { const res = await fetch(url); const data = await res.json(); contentList = page === 1 ? data.results : [...contentList, ...data.results]; hasMore = data.page < data.total_pages; } catch { console.error("Fetch failed"); }
+            try { 
+                const res = await fetch(url); const data = await res.json(); 
+                list = page === 1 ? data.results : [...list, ...data.results]; 
+                hasMore = data.page < data.total_pages; 
+            } catch (e) { err("Connection error. Check API key."); }
             loading = false; render();
         }
 
@@ -55,7 +60,7 @@
                     curS = first ? first.season_number : 1;
                     await updateMaxEp(); 
                 }
-            } catch { console.error("Details failed"); }
+            } catch { err("Failed to load details."); }
             loading = false; render();
         }
 
@@ -66,15 +71,17 @@
             } catch { maxE = 1; }
         }
 
-        async function changeSeason(val) {
-            curS = val === 'custom' ? parseInt(prompt("Season:")) : parseInt(val);
-            curE = 1; await updateMaxEp(); render();
+        async function changeS(v) { 
+            if(v==='custom') { const p = prompt("Season:"); if(p) curS = parseInt(p); } else curS = parseInt(v);
+            curE = 1; await updateMaxEp(); render(); 
         }
 
         function render() {
             if (selected) {
                 const s = selected, isTV = s.content_type === 'tv';
-                const year = getYear(isTV ? s.first_air_date : s.release_date);
+                const date = isTV ? s.first_air_date : s.release_date;
+                const year = date ? `(${date.split('-')[0]})` : '';
+                const fullDate = date ? new Date(date).toLocaleDateString() : 'Unknown';
                 const src = isTV ? `https://vidsrc.me/embed/tv?imdb=${s.imdb_id}&season=${curS}&episode=${curE}&ds_lang=en` : `https://vidsrc.me/embed/${s.imdb_id}?ds_lang=en`;
                 let sOpt = '', eOpt = '';
                 if(isTV && s.seasons) {
@@ -85,45 +92,43 @@
                     <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 relative">
                         <button onclick="selected=null;render()" class="absolute top-4 right-4 bg-indigo-600 p-2 rounded-full shadow-lg">✕</button>
                         <div class="flex flex-col md:flex-row gap-6 mb-8">
-                            <img src="${s.poster_path ? IMG_URL+s.poster_path : PLCHOLDER}" class="w-48 rounded-lg h-full">
+                            <img src="${s.poster_path?IMG_URL+s.poster_path:PLCHOLDER}" class="w-48 rounded-lg">
                             <div class="text-center md:text-left">
-                                <h2 class="text-3xl font-bold text-indigo-300">${s.title || s.name} <span class="text-gray-500 text-2xl">${year}</span></h2>
-                                <p class="mt-4 text-gray-300 line-clamp-6">${s.overview || "No overview."}</p>
+                                <h2 class="text-3xl font-bold text-indigo-300">${s.title || s.name} <span class="text-gray-500">${year}</span></h2>
+                                <p class="text-gray-400 my-2">Release Date: ${fullDate}</p>
+                                <p class="text-gray-300 line-clamp-6">${s.overview || "No overview available."}</p>
                             </div>
                         </div>
                         <div class="text-center">
                             <h3 class="text-2xl font-bold mb-4">Watch Now</h3>
                             ${isTV ? `<div class="flex flex-wrap justify-center gap-4 mb-4">
-                                <select onchange="changeSeason(this.value)" class="bg-gray-700 p-2 rounded">${sOpt}<option value="custom">Custom...</option></select>
-                                <select onchange="curE=parseInt(this.value);render()" class="bg-gray-700 p-2 rounded">${eOpt}<option value="custom">Custom...</option></select>
+                                <select onchange="changeS(this.value)" class="bg-gray-700 p-2 rounded">${sOpt}<option value="custom">Custom...</option></select>
+                                <select onchange="curE=parseInt(this.value);render()" class="bg-gray-700 p-2 rounded">${eOpt}</select>
                                 <button onclick="nextEp()" class="bg-indigo-600 p-2 px-4 rounded font-bold">Next >></button>
                             </div>` : ''}
                             <div class="video-container"><iframe src="${src}" allowfullscreen></iframe></div>
                         </div>
                     </div>`;
             } else {
-                let cards = contentList.map(c => {
-                    const year = getYear(type === 'tv' ? c.first_air_date : c.release_date);
-                    return `<div onclick="fetchDetails(${c.id},'${type}')" class="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:scale-105 transition">
-                        <img src="${c.poster_path ? IMG_URL+c.poster_path : PLCHOLDER}" class="w-full">
-                        <div class="p-3 text-center">
-                            <div class="truncate font-semibold">${c.title || c.name}</div>
-                            <div class="text-xs text-gray-500 mt-1">${year}</div>
-                        </div>
+                let cards = list.map(c => {
+                    const d = type === 'tv' ? c.first_air_date : c.release_date;
+                    const y = d ? `(${d.split('-')[0]})` : '';
+                    return `<div onclick="fetchDetails(${c.id},'${type}')" class="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:scale-105 transition shadow-lg">
+                        <img src="${c.poster_path?IMG_URL+c.poster_path:PLCHOLDER}" class="w-full">
+                        <div class="p-3 text-center"><div class="truncate font-semibold">${c.title || c.name}</div><div class="text-xs text-gray-500 mt-1">${y}</div></div>
                     </div>`
                 }).join('');
                 $('content-display').innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-6">${cards}</div>
                 ${loading ? '<div class="text-center mt-8 animate-spin text-3xl">◌</div>' : ''}
-                ${hasMore && !loading ? '<div class="text-center mt-8"><button onclick="page++;fetchContent()" class="bg-indigo-600 px-6 py-2 rounded-full shadow-md">More</button></div>' : ''}`;
+                ${hasMore && !loading ? '<div class="text-center mt-8"><button onclick="page++;fetchContent()" class="bg-indigo-600 px-6 py-2 rounded-full">Load More</button></div>' : ''}`;
             }
         }
 
         window.nextEp = async () => {
             if (curE < maxE) { curE++; render(); }
             else { 
-                const nextS = selected.seasons.find(s => s.season_number == curS + 1); 
-                if(nextS) { curS++; curE=1; await updateMaxEp(); render(); } 
-                else alert("End of Series"); 
+                const nS = selected.seasons.find(s => s.season_number == curS + 1); 
+                if(nS) { curS++; curE=1; await updateMaxEp(); render(); } else alert("End of Series"); 
             }
         };
 
