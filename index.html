@@ -27,7 +27,7 @@
     <div id="content-display"></div>
     <script>
         const API_KEY = '47d9d5e21090f4de14010605a2f5d5ca', IMG_URL = 'https://image.tmdb.org/t/p/w500', PLCHOLDER = 'https://placehold.co/500x750?text=No+Poster';
-        let list = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1;
+        let list = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1, scrollPos = 0;
         const $ = id => document.getElementById(id);
         const err = (m) => { if(m) { $('err-box').innerText = m; $('err-box').classList.remove('hidden'); } else $('err-box').classList.add('hidden'); };
         function setType(t) {
@@ -51,6 +51,7 @@
             loading = false; render();
         }
         async function fetchDetails(id, t) {
+            scrollPos = window.scrollY || window.pageYOffset;
             loading = true; render();
             try {
                 const [d, ex] = await Promise.all([
@@ -93,7 +94,7 @@
                 }
                 $('content-display').innerHTML = `
                     <div class="max-w-4xl mx-auto bg-gray-900/40 border border-gray-800 rounded-xl p-8 relative">
-                        <button onclick="selected=null;render()" class="absolute top-4 right-4 bg-transparent border border-gray-600 text-gray-400 p-2 rounded-lg transition-all" style="hover:border-color: var(--accent); hover:color: var(--accent-light);" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent-light)';" onmouseout="this.style.borderColor='#4b5563'; this.style.color='#9ca3af';">✕</button>
+                        <button onclick="selected=null;render(); window.scrollTo(0, scrollPos);" class="absolute top-4 right-4 bg-transparent border border-gray-600 text-gray-400 p-2 rounded-lg transition-all" style="hover:border-color: var(--accent); hover:color: var(--accent-light);" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent-light)';" onmouseout="this.style.borderColor='#4b5563'; this.style.color='#9ca3af';">✕</button>
                         <div class="flex flex-col md:flex-row gap-8 mb-8">
                             <img src="${s.poster_path?IMG_URL+s.poster_path:PLCHOLDER}" class="w-48 rounded-lg h-full border border-gray-800">
                             <div class="text-center md:text-left">
