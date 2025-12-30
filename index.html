@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow"><title>KapStream</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -11,13 +12,13 @@
     </style>
 </head>
 <body class="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
-    <header class="text-center mb-8">
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-indigo-400 mb-2">KapStream</h1>
-        <div class="flex justify-center gap-4 mb-8">
-            <button id="movie-button" onclick="setType('movie')" class="py-2 px-6 rounded-full font-semibold bg-indigo-600 shadow-lg transition-all">Movies</button>
+    <header id="main-header" class="text-center mb-8">
+        <h1 class="text-4xl sm:text-5xl text-cyan-400 mb-4" style="font-family: 'Orbitron', sans-serif; font-weight: 900;">kapstream</h1>
+        <div class="flex justify-center gap-4 mb-6">
+            <button id="movie-button" onclick="setType('movie')" class="py-2 px-6 rounded-full font-semibold bg-cyan-600 shadow-lg transition-all">Movies</button>
             <button id="tv-button" onclick="setType('tv')" class="py-2 px-6 rounded-full font-semibold bg-gray-700 text-gray-300 hover:bg-gray-600 transition-all">TV Series</button>
         </div>
-        <input type="text" id="search-input" placeholder="Search..." class="max-w-md w-full p-3 rounded-lg bg-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <input type="text" id="search-input" placeholder="Search..." class="max-w-md w-full p-3 rounded-lg bg-gray-700 focus:ring-2 focus:ring-cyan-500 outline-none">
     </header>
     <div id="err-box" class="hidden bg-red-600 p-4 rounded-lg mb-6 text-center"></div>
     <div id="content-display"></div>
@@ -31,8 +32,8 @@
 
         function setType(t) {
             type = t; page = 1;
-            $('movie-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t==='movie'?'bg-indigo-600 shadow-lg':'bg-gray-700 text-gray-300'}`;
-            $('tv-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t==='tv'?'bg-indigo-600 shadow-lg':'bg-gray-700 text-gray-300'}`;
+            $('movie-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t==='movie'?'bg-cyan-600 shadow-lg':'bg-gray-700 text-gray-300'}`;
+            $('tv-button').className = `py-2 px-6 rounded-full font-semibold transition-all ${t==='tv'?'bg-cyan-600 shadow-lg':'bg-gray-700 text-gray-300'}`;
             fetchContent();
         }
 
@@ -78,6 +79,9 @@
         }
 
         function render() {
+            // This line toggles the search bar and filter buttons
+            $('main-header').classList.toggle('hidden', !!selected);
+
             if (selected) {
                 const s = selected, isTV = s.content_type === 'tv';
                 const date = isTV ? s.first_air_date : s.release_date;
@@ -90,11 +94,11 @@
                 }
                 $('content-display').innerHTML = `
                     <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl p-6 relative">
-                        <button onclick="selected=null;render()" class="absolute top-4 right-4 bg-indigo-600 p-2 rounded-full shadow-lg">✕</button>
+                        <button onclick="selected=null;render()" class="absolute top-4 right-4 bg-cyan-600 p-2 rounded-full shadow-lg hover:bg-cyan-500 transition-colors">✕</button>
                         <div class="flex flex-col md:flex-row gap-6 mb-8">
                             <img src="${s.poster_path?IMG_URL+s.poster_path:PLCHOLDER}" class="w-48 rounded-lg h-full">
                             <div class="text-center md:text-left">
-                                <h2 class="text-3xl font-bold text-indigo-300">${s.title || s.name}</h2>
+                                <h2 class="text-3xl font-bold text-cyan-300">${s.title || s.name}</h2>
                                 <p class="text-gray-400 my-2">Release Date: ${fullDate}</p>
                                 <p class="text-gray-300 line-clamp-6">${s.overview || "No overview available."}</p>
                             </div>
@@ -104,7 +108,7 @@
                             ${isTV ? `<div class="flex flex-wrap justify-center gap-4 mb-4">
                                 <select onchange="changeS(this.value)" class="bg-gray-700 p-2 rounded">${sOpt}<option value="custom">Custom...</option></select>
                                 <select onchange="curE=parseInt(this.value);render()" class="bg-gray-700 p-2 rounded">${eOpt}</select>
-                                <button onclick="nextEp()" class="bg-indigo-600 p-2 px-4 rounded font-bold">Next >></button>
+                                <button onclick="nextEp()" class="bg-cyan-600 p-2 px-4 rounded font-bold hover:bg-cyan-500">Next >></button>
                             </div>` : ''}
                             <div class="video-container"><iframe src="${src}" allowfullscreen></iframe></div>
                         </div>
@@ -117,13 +121,13 @@
                         <img src="${c.poster_path?IMG_URL+c.poster_path:PLCHOLDER}" class="w-full">
                         <div class="p-3 text-center">
                             <div class="truncate font-semibold text-sm sm:text-base">${c.title || c.name}</div>
-                            <div class="text-lg font-bold text-indigo-400 mt-1">${y}</div>
+                            <div class="text-lg font-bold text-cyan-400 mt-1">${y}</div>
                         </div>
                     </div>`
                 }).join('');
                 $('content-display').innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-6">${cards}</div>
                 ${loading ? '<div class="text-center mt-8 animate-spin text-3xl">◌</div>' : ''}
-                ${hasMore && !loading ? '<div class="text-center mt-8"><button onclick="page++;fetchContent()" class="bg-indigo-600 px-6 py-2 rounded-full">Load More</button></div>' : ''}`;
+                ${hasMore && !loading ? '<div class="text-center mt-8"><button onclick="page++;fetchContent()" class="bg-cyan-600 hover:bg-cyan-500 p-4 rounded-full transition-colors shadow-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button></div>' : ''}`;
             }
         }
 
