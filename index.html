@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KapStream</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom styles for the Inter font */
@@ -39,7 +38,6 @@
             KapStream
         </h1>
 
-        <!-- Content Type Selection Buttons -->
         <div class="flex justify-center gap-4 mb-8">
             <button id="movie-button"
                 class="py-2 px-6 rounded-full font-semibold transition-all duration-300 bg-indigo-600 text-white shadow-lg">
@@ -51,7 +49,6 @@
             </button>
         </div>
 
-        <!-- Search Input -->
         <div class="max-w-md mx-auto mb-8">
             <input type="text" id="search-input"
                 placeholder="Search..."
@@ -63,14 +60,11 @@
         <p class="font-semibold"></p>
     </div>
 
-    <!-- Main content area for movie/TV details or grid -->
     <div id="content-display">
-        <!-- Content will be dynamically inserted here by JavaScript -->
-    </div>
+        </div>
 
     <script>
         // IMPORTANT: Replace with your actual TMDB API Key.
-        // You can get one for free from https://www.themoviedb.org/settings/api
         const TMDB_API_KEY = '47d9d5e21090f4de14010605a2f5d5ca';
 
         // Base URL for TMDB images
@@ -123,18 +117,18 @@
             `;
         }
 
-        // Function to fetch content (either popular movies/TV or search results)
+        // Function to fetch content
         async function fetchContent() {
             if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY') {
                 displayError("Please replace 'YOUR_TMDB_API_KEY' with your actual TMDB API key.");
                 loading = false;
-                renderContent(); // Re-render to show error
+                renderContent();
                 return;
             }
 
             loading = true;
             hideError();
-            renderContent(); // Show loading spinner
+            renderContent();
 
             let apiUrl = '';
             if (searchQuery) {
@@ -153,10 +147,10 @@
                 contentList = (page === 1) ? data.results : [...contentList, ...data.results];
                 hasMore = data.page < data.total_pages;
             } catch (err) {
-                displayError(`Failed to fetch ${contentType}s: ${err.message}. Please check your API key and network connection.`);
+                displayError(`Failed to fetch ${contentType}s: ${err.message}.`);
             } finally {
                 loading = false;
-                renderContent(); // Re-render with fetched data or error
+                renderContent();
             }
         }
 
@@ -164,23 +158,17 @@
         async function fetchContentDetails(contentId, type) {
             loading = true;
             hideError();
-            renderContent(); // Show loading spinner
+            renderContent();
 
             try {
                 const detailsResponse = await fetch(
                     `https://api.themoviedb.org/3/${type}/${contentId}?api_key=${TMDB_API_KEY}`
                 );
-                if (!detailsResponse.ok) {
-                    throw new Error(`HTTP error! status: ${detailsResponse.status}`);
-                }
                 const detailsData = await detailsResponse.json();
 
                 const externalIdsResponse = await fetch(
                     `https://api.themoviedb.org/3/${type}/${contentId}/external_ids?api_key=${TMDB_API_KEY}`
                 );
-                if (!externalIdsResponse.ok) {
-                    throw new Error(`HTTP error! status: ${externalIdsResponse.status}`);
-                }
                 const externalIdsData = await externalIdsResponse.json();
 
                 selectedContent = {
@@ -189,27 +177,22 @@
                     content_type: type,
                 };
 
-                // For TV series, initialize selected season and episode
                 if (type === 'tv' && selectedContent.seasons && selectedContent.seasons.length > 0) {
-                    // Find the first season that is not 'Specials' (season_number 0) and has episodes
                     const firstValidSeason = selectedContent.seasons.find(s => s.season_number > 0 && s.episode_count > 0);
                     currentSelectedSeason = firstValidSeason ? firstValidSeason.season_number : 1;
-                    currentSelectedEpisode = 1; // Always start with episode 1
+                    currentSelectedEpisode = 1;
                 } else if (type === 'tv') {
-                    // Fallback if no seasons or episodes found, though unlikely for popular series
                     currentSelectedSeason = 1;
                     currentSelectedEpisode = 1;
                 }
 
-
-                // Log the IMDB ID for debugging
                 console.log('Fetched IMDB ID:', selectedContent.imdb_id);
 
             } catch (err) {
                 displayError(`Failed to fetch ${type} details: ${err.message}`);
             } finally {
                 loading = false;
-                renderContent(); // Re-render with details or error
+                renderContent();
             }
         }
 
@@ -241,38 +224,31 @@
             let html = '';
 
             if (selectedContent) {
-                // Render detail view
                 const title = selectedContent.title || selectedContent.name;
-                const releaseDate = selectedContent.release_date || selectedContent.first_air_date;
-                const releaseDateFormatted = releaseDate ? new Date(releaseDate).toLocaleDateString() : '';
+                const releaseDateFormatted = selectedContent.release_date || selectedContent.first_air_date ? new Date(selectedContent.release_date || selectedContent.first_air_date).toLocaleDateString() : '';
                 const posterPath = selectedContent.poster_path ? `${TMDB_IMAGE_BASE_URL}${selectedContent.poster_path}` : TMDB_POSTER_PLACEHOLDER;
 
                 let embedSrc = '';
                 if (selectedContent.imdb_id) {
+                    // APPLYING CHANGE: Added ds_lang=en and autoplay=1
                     if (selectedContent.content_type === 'movie') {
-                        embedSrc = `https://vidsrc.me/embed/${selectedContent.imdb_id}`;
+                        embedSrc = `https://vidsrc.me/embed/${selectedContent.imdb_id}?ds_lang=en&autoplay=1`;
                     } else {
-                        // For TV series, use selected season and episode
-                        embedSrc = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
+                        embedSrc = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
                     }
-                    console.log('vidsrc.me Embed URL:', embedSrc); // Log embed URL
                 }
 
-                // Generate season options for TV series
                 let seasonOptions = '';
                 if (selectedContent.content_type === 'tv' && selectedContent.seasons) {
                     selectedContent.seasons.forEach(season => {
-                        // Exclude season 0 (Specials) for now unless specifically requested
                         if (season.season_number > 0) {
                             const selected = season.season_number === currentSelectedSeason ? 'selected' : '';
                             seasonOptions += `<option value="${season.season_number}" ${selected}>Season ${season.season_number}</option>`;
                         }
                     });
-                    // Add custom option at the end
                     seasonOptions += `<option value="custom">Custom...</option>`;
                 }
 
-                // Generate episode options for TV series
                 let episodeOptions = '';
                 if (selectedContent.content_type === 'tv' && selectedContent.seasons) {
                     const currentSeasonData = selectedContent.seasons.find(s => s.season_number === currentSelectedSeason);
@@ -282,10 +258,8 @@
                             episodeOptions += `<option value="${i}" ${selected}>Episode ${i}</option>`;
                         }
                     }
-                    // Add custom option at the end
                     episodeOptions += `<option value="custom">Custom...</option>`;
                 }
-
 
                 html = `
                     <div class="max-w-4xl mx-auto bg-gray-800 rounded-xl shadow-2xl p-6 relative">
@@ -301,9 +275,7 @@
                                  class="w-48 h-auto rounded-lg shadow-lg flex-shrink-0"
                                  onerror="this.onerror=null;this.src='${TMDB_POSTER_PLACEHOLDER}';">
                             <div class="text-center md:text-left">
-                                <h2 class="text-3xl sm:text-4xl font-bold text-indigo-300 mb-2">
-                                    ${title}
-                                </h2>
+                                <h2 class="text-3xl sm:text-4xl font-bold text-indigo-300 mb-2">${title}</h2>
                                 ${releaseDateFormatted ? `<p class="text-gray-400 text-lg mb-2">Release Date: ${releaseDateFormatted}</p>` : ''}
                                 <p class="text-gray-300 text-base sm:text-lg mb-4 leading-relaxed">
                                     ${selectedContent.overview || "No overview available."}
@@ -313,86 +285,49 @@
                         ${selectedContent.imdb_id ? `
                             <div class="mt-8">
                                 <h3 class="text-2xl font-semibold text-indigo-300 mb-4 text-center">Watch Now</h3>
-
                                 ${selectedContent.content_type === 'tv' ? `
                                     <div class="flex flex-wrap justify-center gap-4 mb-4">
                                         <div class="flex items-center gap-2">
                                             <label for="season-select" class="text-gray-300">Season:</label>
-                                            <select id="season-select" class="p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                            <select id="season-select" class="p-2 rounded-md bg-gray-700 text-white">
                                                 ${seasonOptions}
                                             </select>
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <label for="episode-select" class="text-gray-300">Episode:</label>
-                                            <select id="episode-select" class="p-2 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                            <select id="episode-select" class="p-2 rounded-md bg-gray-700 text-white">
                                                 ${episodeOptions}
                                             </select>
                                         </div>
                                     </div>
                                 ` : ''}
-
                                 <div class="video-container">
-                                    <iframe id="vidsrc-iframe" src="${embedSrc}"
-                                            title="${title} - vidsrc.me embed"
-                                            allowFullScreen></iframe>
+                                    <iframe id="vidsrc-iframe" src="${embedSrc}" title="${title}" allowFullScreen></iframe>
                                 </div>
-                                <p class="text-sm text-gray-500 mt-4 text-center">
-                                    Streaming provided by <a href="https://vidsrc.me/" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">vidsrc.me</a>
-                                </p>
                             </div>
-                        ` : `
-                            <div class="mt-8 text-center text-gray-400">
-                                ${loading ? renderLoadingSpinner('Loading stream info...') : `<p>IMDB ID not found for this ${selectedContent.content_type || 'item'}, cannot embed stream. This could mean the content is not available on TMDB with an IMDB ID, or vidsrc.me does not host it.</p>`}
-                            </div>
-                        `}
+                        ` : `<div class="mt-8 text-center text-gray-400">Stream unavailable.</div>`}
                     </div>
                 `;
             } else {
-                // Render grid view
+                // Grid view rendering (Standard)
                 if (contentList.length === 0 && !loading && !error) {
-                    if (searchQuery) {
-                        html += `<p class="text-center text-gray-400 text-xl mt-12">No ${contentType === 'movie' ? 'movies' : 'TV series'} found for "${searchQuery}". Try a different search!</p>`;
-                    } else {
-                        html += `<p class="text-center text-gray-400 text-xl mt-12">No popular ${contentType === 'movie' ? 'movies' : 'TV series'} available.</p>`;
-                    }
+                    html += `<p class="text-center text-gray-400 text-xl mt-12">No results found.</p>`;
                 } else {
-                    html += `
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-                            ${contentList.map(createContentCard).join('')}
-                        </div>
-                    `;
+                    html += `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+                        ${contentList.map(createContentCard).join('')}
+                    </div>`;
                 }
-
-                if (loading) {
-                    html += renderLoadingSpinner(`Loading more ${contentType}s...`);
-                }
-
+                if (loading) html += renderLoadingSpinner(`Loading...`);
                 if (hasMore && !loading && contentList.length > 0) {
-                    html += `
-                        <div class="text-center mt-8">
-                            <button id="load-more-button"
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                Load More
-                            </button>
-                        </div>
-                    `;
-                } else if (!hasMore && !loading && contentList.length > 0) {
-                    html += `
-                        <p class="text-center text-gray-400 mt-8">You've reached the end of the ${searchQuery ? 'search results' : `popular ${contentType} list`}.</p>
-                    `;
+                    html += `<div class="text-center mt-8"><button id="load-more-button" class="bg-indigo-600 text-white py-3 px-6 rounded-full">Load More</button></div>`;
                 }
             }
 
             contentDisplay.innerHTML = html;
 
-            // Add event listeners after rendering
             if (selectedContent) {
-                document.getElementById('back-button').addEventListener('click', () => {
-                    selectedContent = null;
-                    renderContent();
-                });
+                document.getElementById('back-button').addEventListener('click', () => { selectedContent = null; renderContent(); });
 
-                // Add event listeners for TV series season/episode selectors
                 if (selectedContent.content_type === 'tv') {
                     const seasonSelect = document.getElementById('season-select');
                     const episodeSelect = document.getElementById('episode-select');
@@ -401,45 +336,19 @@
                     if (seasonSelect) {
                         seasonSelect.addEventListener('change', (event) => {
                             const selectedValue = event.target.value;
-                            
                             if (selectedValue === 'custom') {
                                 const customSeason = prompt('Enter season number:', currentSelectedSeason);
-                                if (customSeason !== null && customSeason !== '') {
-                                    const seasonNum = parseInt(customSeason);
-                                    if (!isNaN(seasonNum) && seasonNum > 0) {
-                                        currentSelectedSeason = seasonNum;
-                                        currentSelectedEpisode = 1;
-                                        
-                                        // Update iframe
-                                        vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
-                                        console.log('vidsrc.me Embed URL (Custom Season):', vidsrcIframe.src);
-                                        
-                                        // Reset episode dropdown to custom
-                                        episodeSelect.value = 'custom';
-                                    } else {
-                                        alert('Please enter a valid season number (positive integer)');
-                                    }
+                                if (customSeason) {
+                                    currentSelectedSeason = parseInt(customSeason);
+                                    currentSelectedEpisode = 1;
+                                    // APPLYING CHANGE: Added to custom season prompt
+                                    vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
                                 }
-                                // Reset select to previous value
-                                seasonSelect.value = currentSelectedSeason;
                             } else {
                                 currentSelectedSeason = parseInt(selectedValue);
-                                currentSelectedEpisode = 1; // Reset episode to 1 when season changes
-                                
-                                // Update episode options based on new season
-                                const currentSeasonData = selectedContent.seasons.find(s => s.season_number === currentSelectedSeason);
-                                let newEpisodeOptions = '';
-                                if (currentSeasonData && currentSeasonData.episode_count > 0) {
-                                    for (let i = 1; i <= currentSeasonData.episode_count; i++) {
-                                        newEpisodeOptions += `<option value="${i}">Episode ${i}</option>`;
-                                    }
-                                }
-                                newEpisodeOptions += `<option value="custom">Custom...</option>`;
-                                episodeSelect.innerHTML = newEpisodeOptions;
-                                
-                                // Update iframe src
-                                vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
-                                console.log('vidsrc.me Embed URL (Season Change):', vidsrcIframe.src);
+                                currentSelectedEpisode = 1;
+                                // APPLYING CHANGE: Added to season change
+                                vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
                             }
                         });
                     }
@@ -447,95 +356,36 @@
                     if (episodeSelect) {
                         episodeSelect.addEventListener('change', (event) => {
                             const selectedValue = event.target.value;
-                            
                             if (selectedValue === 'custom') {
                                 const customEpisode = prompt('Enter episode number:', currentSelectedEpisode);
-                                if (customEpisode !== null && customEpisode !== '') {
-                                    const episodeNum = parseInt(customEpisode);
-                                    if (!isNaN(episodeNum) && episodeNum > 0) {
-                                        currentSelectedEpisode = episodeNum;
-                                        
-                                        // Update iframe
-                                        vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
-                                        console.log('vidsrc.me Embed URL (Custom Episode):', vidsrcIframe.src);
-                                    } else {
-                                        alert('Please enter a valid episode number (positive integer)');
-                                    }
+                                if (customEpisode) {
+                                    currentSelectedEpisode = parseInt(customEpisode);
+                                    // APPLYING CHANGE: Added to custom episode prompt
+                                    vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
                                 }
-                                // Reset select to previous value
-                                episodeSelect.value = currentSelectedEpisode;
                             } else {
                                 currentSelectedEpisode = parseInt(selectedValue);
-                                // Update iframe src
-                                vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}`;
-                                console.log('vidsrc.me Embed URL (Episode Change):', vidsrcIframe.src);
+                                // APPLYING CHANGE: Added to episode change
+                                vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
                             }
                         });
                     }
                 }
-
             } else {
                 document.querySelectorAll('.group[data-id]').forEach(card => {
                     card.addEventListener('click', (event) => {
-                        const id = event.currentTarget.dataset.id;
-                        const type = event.currentTarget.dataset.type;
-                        fetchContentDetails(id, type);
+                        fetchContentDetails(event.currentTarget.dataset.id, event.currentTarget.dataset.type);
                     });
                 });
-                if (hasMore && !loading && contentList.length > 0) {
-                    document.getElementById('load-more-button').addEventListener('click', () => {
-                        if (!loading && hasMore) {
-                            page++;
-                            fetchContent();
-                        }
-                    });
-                }
+                const loadBtn = document.getElementById('load-more-button');
+                if (loadBtn) loadBtn.addEventListener('click', () => { page++; fetchContent(); });
             }
         }
 
-        // Event Listeners for main buttons and search
-        movieButton.addEventListener('click', () => {
-            if (contentType !== 'movie') {
-                contentType = 'movie';
-                page = 1;
-                searchQuery = '';
-                contentList = [];
-                hasMore = true;
-                movieButton.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-                movieButton.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
-                tvButton.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
-                tvButton.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
-                fetchContent();
-            }
-        });
-
-        tvButton.addEventListener('click', () => {
-            if (contentType !== 'tv') {
-                contentType = 'tv';
-                page = 1;
-                searchQuery = '';
-                contentList = [];
-                hasMore = true;
-                tvButton.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-                tvButton.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
-                movieButton.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
-                movieButton.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
-                fetchContent();
-            }
-        });
-
-        searchInput.addEventListener('input', (e) => {
-            searchQuery = e.target.value;
-            page = 1;
-            contentList = [];
-            hasMore = true;
-            fetchContent();
-        });
-
-        // Initial fetch on page load
-        window.onload = function() {
-            fetchContent();
-        };
+        movieButton.addEventListener('click', () => { contentType = 'movie'; page = 1; fetchContent(); });
+        tvButton.addEventListener('click', () => { contentType = 'tv'; page = 1; fetchContent(); });
+        searchInput.addEventListener('input', (e) => { searchQuery = e.target.value; page = 1; fetchContent(); });
+        window.onload = () => fetchContent();
 
     </script>
 </body>
