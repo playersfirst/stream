@@ -66,6 +66,7 @@
                 }
             } catch { err("Failed to load details."); }
             loading = false; render();
+            window.scrollTo(0, 0);
         }
         async function updateMaxEp() {
             if (!selected || selected.content_type !== 'tv') return;
