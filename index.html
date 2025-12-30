@@ -230,11 +230,10 @@
 
                 let embedSrc = '';
                 if (selectedContent.imdb_id) {
-                    // APPLYING CHANGE: Added ds_lang=en and autoplay=1
                     if (selectedContent.content_type === 'movie') {
-                        embedSrc = `https://vidsrc.me/embed/${selectedContent.imdb_id}?ds_lang=en&autoplay=1`;
+                        embedSrc = `https://vidsrc.me/embed/${selectedContent.imdb_id}?ds_lang=en`;
                     } else {
-                        embedSrc = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
+                        embedSrc = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en`;
                     }
                 }
 
@@ -298,11 +297,17 @@
                                             <select id="episode-select" class="p-2 rounded-md bg-gray-700 text-white">
                                                 ${episodeOptions}
                                             </select>
+                                            <button id="next-episode-button" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-md transition-all flex items-center gap-1 font-bold" title="Next Episode">
+                                                <span>Next</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                  <path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l7-4a1 1 0 000-1.664l-7-4A1 1 0 0010 6v2.798L4.555 5.168z" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </div>
                                 ` : ''}
                                 <div class="video-container">
-<iframe id="vidsrc-iframe" src="${embedSrc}" title="${title} - vidsrc.me embed" allow="autoplay; fullscreen" allowFullScreen></iframe>
+<iframe id="vidsrc-iframe" src="${embedSrc}" title="${title} - vidsrc.me embed" allow="fullscreen" allowFullScreen></iframe>
 </div>
                             </div>
                         ` : `<div class="mt-8 text-center text-gray-400">Stream unavailable.</div>`}
@@ -331,6 +336,7 @@
                 if (selectedContent.content_type === 'tv') {
                     const seasonSelect = document.getElementById('season-select');
                     const episodeSelect = document.getElementById('episode-select');
+                    const nextEpisodeBtn = document.getElementById('next-episode-button');
                     const vidsrcIframe = document.getElementById('vidsrc-iframe');
 
                     if (seasonSelect) {
@@ -341,14 +347,12 @@
                                 if (customSeason) {
                                     currentSelectedSeason = parseInt(customSeason);
                                     currentSelectedEpisode = 1;
-                                    // APPLYING CHANGE: Added to custom season prompt
-                                    vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
+                                    vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en`;
                                 }
                             } else {
                                 currentSelectedSeason = parseInt(selectedValue);
                                 currentSelectedEpisode = 1;
-                                // APPLYING CHANGE: Added to season change
-                                vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
+                                vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en`;
                             }
                         });
                     }
@@ -360,13 +364,32 @@
                                 const customEpisode = prompt('Enter episode number:', currentSelectedEpisode);
                                 if (customEpisode) {
                                     currentSelectedEpisode = parseInt(customEpisode);
-                                    // APPLYING CHANGE: Added to custom episode prompt
-                                    vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
+                                    vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en`;
                                 }
                             } else {
                                 currentSelectedEpisode = parseInt(selectedValue);
-                                // APPLYING CHANGE: Added to episode change
-                                vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en&autoplay=1`;
+                                vidsrcIframe.src = `https://vidsrc.me/embed/tv?imdb=${selectedContent.imdb_id}&season=${currentSelectedSeason}&episode=${currentSelectedEpisode}&ds_lang=en`;
+                            }
+                        });
+                    }
+
+                    if (nextEpisodeBtn) {
+                        nextEpisodeBtn.addEventListener('click', () => {
+                            const currentSeasonData = selectedContent.seasons.find(s => s.season_number === currentSelectedSeason);
+                            if (currentSelectedEpisode < currentSeasonData.episode_count) {
+                                // Go to next episode in same season
+                                currentSelectedEpisode++;
+                                renderContent();
+                            } else {
+                                // Try to go to next season
+                                const nextSeason = selectedContent.seasons.find(s => s.season_number === currentSelectedSeason + 1);
+                                if (nextSeason) {
+                                    currentSelectedSeason++;
+                                    currentSelectedEpisode = 1;
+                                    renderContent();
+                                } else {
+                                    alert("End of series reached!");
+                                }
                             }
                         });
                     }
