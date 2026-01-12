@@ -138,7 +138,8 @@
             }
         };
         $('search-input').oninput = e => { query=e.target.value; page=1; fetchContent(); };
-        document.addEventListener('keydown', e => { if (document.activeElement.tagName !== 'INPUT' && e.key.toLowerCase() === 'n' && selected?.content_type === 'tv') nextEp(); });
+        document.addEventListener('keydown', e => { if (document.activeElement.tagName !== 'INPUT' && selected?.content_type === 'tv' && e.key.toLowerCase() === 'n') nextEp(); if (document.activeElement.tagName !== 'INPUT' && e.key.toLowerCase() === 'f') document.querySelector('iframe')?.requestFullscreen(); });
+        window.addEventListener('blur', () => { if (selected) setTimeout(() => window.focus(), 100); });
         window.onload = fetchContent;
     </script>
 </body>
