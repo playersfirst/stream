@@ -138,6 +138,7 @@
             }
         };
         $('search-input').oninput = e => { query=e.target.value; page=1; fetchContent(); };
+        document.addEventListener('keydown', e => { if (document.activeElement.tagName !== 'INPUT' && e.key.toLowerCase() === 'n' && selected?.content_type === 'tv') nextEp(); });
         window.onload = fetchContent;
     </script>
 </body>
