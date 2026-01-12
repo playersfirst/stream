@@ -138,9 +138,9 @@
             }
         };
         $('search-input').oninput = e => { query=e.target.value; page=1; fetchContent(); };
-document.addEventListener('keydown', e => { if (document.activeElement.tagName !== 'INPUT' && selected?.content_type === 'tv' && e.key.toLowerCase() === 'n') { const f = document.fullscreenElement; nextEp().then(() => { if (f) f.requestFullscreen(); }); } if (document.activeElement.tagName !== 'INPUT' && e.key.toLowerCase() === 'f') document.querySelector('iframe')?.requestFullscreen(); });
+document.addEventListener('keydown', e => { if (document.activeElement.tagName !== 'INPUT' && selected?.content_type === 'tv' && (e.key.toLowerCase() === 'n' || e.key === 'MediaTrackNext')) { const f = document.fullscreenElement; nextEp().then(() => { if (f) f.requestFullscreen(); }); } if (document.activeElement.tagName !== 'INPUT' && e.key.toLowerCase() === 'f') document.querySelector('iframe')?.requestFullscreen(); });
 window.addEventListener('blur', () => { if (selected) setTimeout(() => window.focus(), 100); });
-        window.onload = fetchContent;
+window.onload = fetchContent;
     </script>
 </body>
 </html>
