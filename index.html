@@ -30,7 +30,6 @@
         let list = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1, scrollPos = 0;
         const $ = id => document.getElementById(id);
         const err = (m) => { if(m) { $('err-box').innerText = m; $('err-box').classList.remove('hidden'); } else $('err-box').classList.add('hidden'); };
-        
         function setType(t) {
             type = t; page = 1;
             $('movie-button').className = `py-2.5 px-6 rounded-lg font-semibold transition-all border min-w-[100px] ${t==='movie'?'text-white':'bg-transparent text-gray-400 border-gray-600'}`;
@@ -41,7 +40,6 @@
             $('tv-button').style.borderColor = t==='tv' ? 'var(--accent)' : '#4b5563';
             fetchContent();
         }
-
         async function fetchContent() {
             loading = true; render(); err(null);
             const url = query ? `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${page}` : `https://api.themoviedb.org/3/${type}/popular?api_key=${API_KEY}&page=${page}`;
@@ -52,7 +50,6 @@
             } catch (e) { err("Connection error."); }
             loading = false; render();
         }
-
         async function fetchDetails(id, t) {
             scrollPos = window.scrollY || window.pageYOffset;
             loading = true; render();
@@ -71,7 +68,6 @@
             loading = false; render();
             window.scrollTo(0, 0);
         }
-
         async function updateMaxEp() {
             if (!selected || selected.content_type !== 'tv') return;
             try {
@@ -79,12 +75,10 @@
                 maxE = res.episodes ? res.episodes.length : 1;
             } catch { maxE = 1; }
         }
-
         async function changeS(v) { 
             curS = v === 'custom' ? parseInt(prompt("Season:")) : parseInt(v);
             curE = 1; await updateMaxEp(); render(); 
         }
-
         function render() {
             $('main-header').classList.toggle('hidden', !!selected);
 
@@ -100,7 +94,7 @@
                 }
                 $('content-display').innerHTML = `
                     <div class="max-w-4xl mx-auto bg-gray-900/40 border border-gray-800 rounded-xl p-8 relative">
-                        <button onclick="selected=null;render(); window.scrollTo(0, scrollPos);" class="absolute top-4 right-4 bg-transparent border border-gray-600 text-gray-400 p-2 rounded-lg transition-all" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent-light)';" onmouseout="this.style.borderColor='#4b5563'; this.style.color='#9ca3af';">✕</button>
+                        <button onclick="selected=null;render(); window.scrollTo(0, scrollPos);" class="absolute top-4 right-4 bg-transparent border border-gray-600 text-gray-400 p-2 rounded-lg transition-all" style="hover:border-color: var(--accent); hover:color: var(--accent-light);" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent-light)';" onmouseout="this.style.borderColor='#4b5563'; this.style.color='#9ca3af';">✕</button>
                         <div class="flex flex-col md:flex-row gap-8 mb-8">
                             <img src="${s.poster_path?IMG_URL+s.poster_path:PLCHOLDER}" class="w-48 rounded-lg h-full border border-gray-800">
                             <div class="text-center md:text-left">
@@ -111,11 +105,11 @@
                         </div>
                         <div class="text-center">
                             ${isTV ? `<div class="flex flex-wrap justify-center gap-4 mb-6">
-                                <select onchange="changeS(this.value)" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding: 0.66rem 2.1rem 0.66rem 0.79rem; font-size: 0.92rem;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${sOpt}<option value="custom">Custom...</option></select>
-                                <select onchange="curE=parseInt(this.value);render()" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding: 0.66rem 2.1rem 0.66rem 0.79rem; font-size: 0.92rem;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${eOpt}</select>
+                                <select onchange="changeS(this.value)" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem; focus:border-color: var(--accent);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${sOpt}<option value="custom">Custom...</option></select>
+                                <select onchange="curE=parseInt(this.value);render()" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem; focus:border-color: var(--accent);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${eOpt}</select>
                                 <button onclick="nextEp()" class="p-2.5 px-3 rounded-lg font-bold transition-all text-white" style="background: var(--accent); align-self: center;" onmouseover="this.style.background='var(--accent-hover)'" onmouseout="this.style.background='var(--accent)'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
                             </div>` : ''}
-                            <div class="video-container" id="player-wrapper"><iframe src="${src}" allowfullscreen></iframe></div>
+                            <div class="video-container"><iframe src="${src}" allowfullscreen></iframe></div>
                         </div>
                     </div>`;
             } else {
@@ -135,7 +129,6 @@
                 ${hasMore && !loading ? '<div class="text-center mt-8"><button onclick="page++;fetchContent()" class="p-4 rounded-full transition-all text-white" style="background: var(--accent);" onmouseover="this.style.background=\'var(--accent-hover)\'" onmouseout="this.style.background=\'var(--accent)\'"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button></div>' : ''}`;
             }
         }
-
         window.nextEp = async () => {
             if (!selected || selected.content_type !== 'tv') return;
             if (curE < maxE) { curE++; render(); }
@@ -144,36 +137,9 @@
                 if(nS) { curS++; curE=1; await updateMaxEp(); render(); } else alert("End of Series"); 
             }
         };
-
         $('search-input').oninput = e => { query=e.target.value; page=1; fetchContent(); };
-
-        // Updated Keyboard Controls
-        document.addEventListener('keydown', e => {
-            if (document.activeElement.tagName === 'INPUT') return;
-            const key = e.key.toLowerCase();
-            const container = $("player-wrapper");
-
-            // Fullscreen toggle with 'F'
-            if (key === 'f' && container) {
-                if (!document.fullscreenElement) {
-                    container.requestFullscreen().catch(err => {
-                        document.querySelector('iframe')?.requestFullscreen();
-                    });
-                } else {
-                    document.exitFullscreen();
-                }
-            }
-
-            // Next Episode with 'N'
-            if (selected?.content_type === 'tv' && key === 'n') {
-                const isFS = !!document.fullscreenElement;
-                nextEp().then(() => {
-                    if (isFS && container) container.requestFullscreen();
-                });
-            }
-        });
-
-        window.addEventListener('blur', () => { if (selected) setTimeout(() => window.focus(), 100); });
+document.addEventListener('keydown', e => { if (document.activeElement.tagName !== 'INPUT' && selected?.content_type === 'tv' && e.key.toLowerCase() === 'n') { const f = document.fullscreenElement; nextEp().then(() => { if (f) f.requestFullscreen(); }); } if (document.activeElement.tagName !== 'INPUT' && e.key.toLowerCase() === 'f') document.querySelector('iframe')?.requestFullscreen(); });
+window.addEventListener('blur', () => { if (selected) setTimeout(() => window.focus(), 100); });
         window.onload = fetchContent;
     </script>
 </body>
