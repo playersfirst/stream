@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow"><title>I love you Hajar</title>
+    <meta name="robots" content="noindex, nofollow"><title>KapStream</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -16,7 +16,131 @@
 </head>
 <body class="min-h-screen text-white p-4 sm:p-8">
     <header id="main-header" class="text-center">
-        <h1 class="text-4xl sm:text-5xl mb-5" style="font-family: 'Orbitron', sans-serif; font-weight: 900; color: var(--accent-light);">I love you Hajar</h1>
-       
+        <h1 class="text-4xl sm:text-5xl mb-5" style="font-family: 'Orbitron', sans-serif; font-weight: 900; color: var(--accent-light);">kapstream</h1>
+        <div class="flex justify-center gap-4 mb-5">
+            <button id="movie-button" onclick="setType('movie')" class="py-2.5 px-6 rounded-lg font-semibold text-white border transition-all min-w-[100px]" style="background: var(--accent); border-color: var(--accent);">Movies</button>
+            <button id="tv-button" onclick="setType('tv')" class="py-2.5 px-6 rounded-lg font-semibold bg-transparent text-gray-400 hover:text-gray-300 border border-gray-600 transition-all min-w-[100px]">Series</button>
+        </div>
+        <input type="text" id="search-input" placeholder="Search..." class="max-w-md w-full py-2.5 px-4 rounded-lg bg-transparent text-gray-400 border border-gray-600 outline-none mb-5" onfocus="this.style.borderColor='var(--accent)'; this.style.color='white';" onblur="this.style.borderColor='#4b5563'; this.style.color='#9ca3af';">
+    </header>
+    <div id="err-box" class="hidden bg-red-900/30 border border-red-700 p-4 rounded-lg mb-6 text-center"></div>
+    <div id="content-display"></div>
+    <script>
+        const API_KEY = '47d9d5e21090f4de14010605a2f5d5ca', IMG_URL = 'https://image.tmdb.org/t/p/w500', PLCHOLDER = 'https://placehold.co/500x750?text=No+Poster';
+        let list = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1, scrollPos = 0;
+        const $ = id => document.getElementById(id);
+        const err = (m) => { if(m) { $('err-box').innerText = m; $('err-box').classList.remove('hidden'); } else $('err-box').classList.add('hidden'); };
+        function setType(t) {
+            type = t; page = 1;
+            $('movie-button').className = `py-2.5 px-6 rounded-lg font-semibold transition-all border min-w-[100px] ${t==='movie'?'text-white':'bg-transparent text-gray-400 border-gray-600'}`;
+            $('movie-button').style.background = t==='movie' ? 'var(--accent)' : 'transparent';
+            $('movie-button').style.borderColor = t==='movie' ? 'var(--accent)' : '#4b5563';
+            $('tv-button').className = `py-2.5 px-6 rounded-lg font-semibold transition-all border min-w-[100px] ${t==='tv'?'text-white':'bg-transparent text-gray-400 border-gray-600'}`;
+            $('tv-button').style.background = t==='tv' ? 'var(--accent)' : 'transparent';
+            $('tv-button').style.borderColor = t==='tv' ? 'var(--accent)' : '#4b5563';
+            fetchContent();
+        }
+        async function fetchContent() {
+            loading = true; render(); err(null);
+            const url = query ? `https://api.themoviedb.org/3/search/${type}?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${page}` : `https://api.themoviedb.org/3/${type}/popular?api_key=${API_KEY}&page=${page}`;
+            try { 
+                const res = await fetch(url); const data = await res.json(); 
+                list = page === 1 ? data.results : [...list, ...data.results]; 
+                hasMore = data.page < data.total_pages; 
+            } catch (e) { err("Connection error."); }
+            loading = false; render();
+        }
+        async function fetchDetails(id, t) {
+            scrollPos = window.scrollY || window.pageYOffset;
+            loading = true; render();
+            try {
+                const [d, ex] = await Promise.all([
+                    fetch(`https://api.themoviedb.org/3/${t}/${id}?api_key=${API_KEY}`).then(r => r.json()),
+                    fetch(`https://api.themoviedb.org/3/${t}/${id}/external_ids?api_key=${API_KEY}`).then(r => r.json())
+                ]);
+                selected = {...d, imdb_id: ex.imdb_id, content_type: t};
+                if (t === 'tv') { 
+                    const first = d.seasons?.find(s => s.season_number > 0);
+                    curS = first ? first.season_number : 1; curE = 1;
+                    await updateMaxEp(); 
+                }
+            } catch { err("Failed to load details."); }
+            loading = false; render();
+            window.scrollTo(0, 0);
+        }
+        async function updateMaxEp() {
+            if (!selected || selected.content_type !== 'tv') return;
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/tv/${selected.id}/season/${curS}?api_key=${API_KEY}`).then(r => r.json());
+                maxE = res.episodes ? res.episodes.length : 1;
+            } catch { maxE = 1; }
+        }
+        async function changeS(v) { 
+            curS = v === 'custom' ? parseInt(prompt("Season:")) : parseInt(v);
+            curE = 1; await updateMaxEp(); render(); 
+        }
+        function render() {
+            $('main-header').classList.toggle('hidden', !!selected);
+
+            if (selected) {
+                const s = selected, isTV = s.content_type === 'tv';
+                const date = isTV ? s.first_air_date : s.release_date;
+                const fullDate = date ? new Date(date).toLocaleDateString() : 'Unknown';
+                const src = isTV ? `https://vidsrc.me/embed/tv?imdb=${s.imdb_id}&season=${curS}&episode=${curE}&ds_lang=en` : `https://vidsrc.me/embed/${s.imdb_id}?ds_lang=en`;
+                let sOpt = '', eOpt = '';
+                if(isTV && s.seasons) {
+                    s.seasons.filter(x => x.season_number > 0).forEach(x => sOpt += `<option value="${x.season_number}" ${x.season_number==curS?'selected':''}>Season ${x.season_number}</option>`);
+                    for(let i=1; i<=maxE; i++) eOpt += `<option value="${i}" ${i==curE?'selected':''}>Episode ${i}</option>`;
+                }
+                $('content-display').innerHTML = `
+                    <div class="max-w-4xl mx-auto bg-gray-900/40 border border-gray-800 rounded-xl p-8 relative">
+                        <button onclick="selected=null;render(); window.scrollTo(0, scrollPos);" class="absolute top-4 right-4 bg-transparent border border-gray-600 text-gray-400 p-2 rounded-lg transition-all" style="hover:border-color: var(--accent); hover:color: var(--accent-light);" onmouseover="this.style.borderColor='var(--accent)'; this.style.color='var(--accent-light)';" onmouseout="this.style.borderColor='#4b5563'; this.style.color='#9ca3af';">✕</button>
+                        <div class="flex flex-col md:flex-row gap-8 mb-8">
+                            <img src="${s.poster_path?IMG_URL+s.poster_path:PLCHOLDER}" class="w-48 rounded-lg h-full border border-gray-800">
+                            <div class="text-center md:text-left">
+                                <h2 class="text-3xl font-bold" style="color: var(--accent-light);">${s.title || s.name}</h2>
+                                <p class="text-gray-500 my-3 text-lg">Release Date: ${fullDate}</p>
+                                <p class="text-gray-400 line-clamp-6 leading-relaxed">${s.overview || "No overview available."}</p>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            ${isTV ? `<div class="flex flex-wrap justify-center gap-4 mb-6">
+                                <select onchange="changeS(this.value)" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem; focus:border-color: var(--accent);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${sOpt}<option value="custom">Custom...</option></select>
+                                <select onchange="curE=parseInt(this.value);render()" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem; focus:border-color: var(--accent);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${eOpt}</select>
+                                <button onclick="nextEp()" class="p-2.5 px-3 rounded-lg font-bold transition-all text-white" style="background: var(--accent); align-self: center;" onmouseover="this.style.background='var(--accent-hover)'" onmouseout="this.style.background='var(--accent)'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                            </div>` : ''}
+                            <div class="video-container"><iframe src="${src}" allowfullscreen></iframe></div>
+                        </div>
+                    </div>`;
+            } else {
+                let cards = list.map(c => {
+                    const d = type === 'tv' ? c.first_air_date : c.release_date;
+                    const y = d ? d.split('-')[0] : '';
+                    return `<div onclick="fetchDetails(${c.id},'${type}')" class="bg-gray-900/40 border border-gray-800 rounded-lg overflow-hidden cursor-pointer hover:scale-105 transition">
+                        <img src="${c.poster_path?IMG_URL+c.poster_path:PLCHOLDER}" class="w-full">
+                        <div class="p-4 text-center">
+                            <div class="truncate font-semibold text-sm sm:text-base mb-1">${c.title || c.name}</div>
+                            <div class="text-lg font-bold" style="color: var(--accent-light);">${y}</div>
+                        </div>
+                    </div>`
+                }).join('');
+                $('content-display').innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-6">${cards}</div>
+                ${loading ? '<div class="text-center mt-8 animate-spin text-3xl">◌</div>' : ''}
+                ${hasMore && !loading ? '<div class="text-center mt-8"><button onclick="page++;fetchContent()" class="p-4 rounded-full transition-all text-white" style="background: var(--accent);" onmouseover="this.style.background=\'var(--accent-hover)\'" onmouseout="this.style.background=\'var(--accent)\'"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></button></div>' : ''}`;
+            }
+        }
+        window.nextEp = async () => {
+            if (!selected || selected.content_type !== 'tv') return;
+            if (curE < maxE) { curE++; render(); }
+            else { 
+                const nS = selected.seasons.find(s => s.season_number == curS + 1); 
+                if(nS) { curS++; curE=1; await updateMaxEp(); render(); } else alert("End of Series"); 
+            }
+        };
+        $('search-input').oninput = e => { query=e.target.value; page=1; fetchContent(); };
+document.addEventListener('keydown', e => { if (document.activeElement.tagName !== 'INPUT' && selected?.content_type === 'tv' && e.key.toLowerCase() === 'n') { const f = document.fullscreenElement; nextEp().then(() => { if (f) f.requestFullscreen(); }); } if (document.activeElement.tagName !== 'INPUT' && e.key.toLowerCase() === 'f') document.querySelector('iframe')?.requestFullscreen(); });
+window.addEventListener('blur', () => { if (selected) setTimeout(() => window.focus(), 100); });
+        window.onload = fetchContent;
+    </script>
 </body>
 </html>
