@@ -109,7 +109,7 @@
                                 <select onchange="curE=parseInt(this.value);render()" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem; focus:border-color: var(--accent);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${eOpt}</select>
                                 <button onclick="nextEp()" class="p-2.5 px-3 rounded-lg font-bold transition-all text-white" style="background: var(--accent); align-self: center;" onmouseover="this.style.background='var(--accent-hover)'" onmouseout="this.style.background='var(--accent)'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
                             </div>` : ''}
-<div class="video-container"><iframe src="${src}" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation"></iframe></div>
+<div class="video-container"><iframe src="${src}" allowfullscreen></iframe></div>
 </div>
                     </div>`;
             } else {
