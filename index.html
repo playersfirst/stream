@@ -29,7 +29,7 @@
     <div id="content-display"></div>
     <script>
         const API_KEY = '47d9d5e21090f4de14010605a2f5d5ca', IMG_URL = 'https://image.tmdb.org/t/p/w500', PLCHOLDER = 'https://placehold.co/500x750?text=No+Poster';
-        let list = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1, scrollPos = 0, curServer = 'vidsrc';
+        let list = [], selected = null, loading = true, page = 1, hasMore = true, query = '', type = 'movie', curS = 1, curE = 1, maxE = 1, scrollPos = 0, curServer = '1';
         const $ = id => document.getElementById(id);
         const err = (m) => { if(m) { $('err-box').innerText = m; $('err-box').classList.remove('hidden'); } else $('err-box').classList.add('hidden'); };
         function setType(t) {
@@ -61,7 +61,7 @@
                     fetch(`https://api.themoviedb.org/3/${t}/${id}/external_ids?api_key=${API_KEY}`).then(r => r.json())
                 ]);
                 selected = {...d, imdb_id: ex.imdb_id, content_type: t};
-                curServer = 'vidsrc'; // Reset to default server on new selection
+                curServer = '1'; // Reset to Server 1 on new selection
                 if (t === 'tv') { 
                     const first = d.seasons?.find(s => s.season_number > 0);
                     curS = first ? first.season_number : 1; curE = 1;
@@ -90,10 +90,12 @@
                 const fullDate = date ? new Date(date).toLocaleDateString() : 'Unknown';
                 
                 let src = '';
-                if (curServer === 'vidsrc') {
+                if (curServer === '1') {
                     src = isTV ? `https://vidsrc.sh/embed/tv?imdb=${s.imdb_id}&season=${curS}&episode=${curE}&ds_lang=en` : `https://vidsrc.sh/embed/${s.imdb_id}?ds_lang=en`;
-                } else {
+                } else if (curServer === '2') {
                     src = isTV ? `https://vidlink.pro/tv/${s.id}/${curS}/${curE}` : `https://vidlink.pro/movie/${s.id}`;
+                } else {
+                    src = isTV ? `https://www.2embed.cc/embedtv/${s.id}&s=${curS}&e=${curE}` : `https://www.2embed.cc/embed/${s.id}`;
                 }
 
                 let sOpt = '', eOpt = '';
@@ -103,9 +105,10 @@
                 }
                 
                 const serverSelectHTML = `
-                    <select onchange="curServer=this.value;render()" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem;">
-                        <option value="vidsrc" ${curServer==='vidsrc'?'selected':''}>Server 1 (VidSrc)</option>
-                        <option value="vidlink" ${curServer==='vidlink'?'selected':''}>Server 2 (VidLink)</option>
+                    <select onchange="curServer=this.value;render()" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">
+                        <option value="1" ${curServer==='1'?'selected':''}>Server 1</option>
+                        <option value="2" ${curServer==='2'?'selected':''}>Server 2</option>
+                        <option value="3" ${curServer==='3'?'selected':''}>Server 3</option>
                     </select>
                 `;
 
@@ -122,12 +125,12 @@
                         </div>
                         <div class="text-center">
                             <div class="flex flex-wrap justify-center gap-4 mb-6">
-                                ${serverSelectHTML}
                                 ${isTV ? `
                                     <select onchange="changeS(this.value)" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${sOpt}<option value="custom">Custom...</option></select>
                                     <select onchange="curE=parseInt(this.value);render()" class="bg-gray-900/50 border border-gray-700 rounded-lg outline-none" style="padding-top: 0.66rem; padding-bottom: 0.66rem; padding-left: 0.79rem; padding-right: 2.1rem; font-size: 0.92rem;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#374151'">${eOpt}</select>
                                     <button onclick="nextEp()" class="p-2.5 px-3 rounded-lg font-bold transition-all text-white" style="background: var(--accent); align-self: center;" onmouseover="this.style.background='var(--accent-hover)'" onmouseout="this.style.background='var(--accent)'"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
                                 ` : ''}
+                                ${serverSelectHTML}
                             </div>
                             <div class="video-container"><iframe src="${src}" allowfullscreen></iframe></div>
                         </div>
