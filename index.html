@@ -86,7 +86,7 @@
                 const s = selected, isTV = s.content_type === 'tv';
                 const date = isTV ? s.first_air_date : s.release_date;
                 const fullDate = date ? new Date(date).toLocaleDateString() : 'Unknown';
-                const src = isTV ? `https://vidsrc.me/embed/tv?imdb=${s.imdb_id}&season=${curS}&episode=${curE}&ds_lang=en` : `https://vidsrc.me/embed/${s.imdb_id}?ds_lang=en`;
+                const src = isTV ? `https://vidsrc.sh/embed/tv?imdb=${s.imdb_id}&season=${curS}&episode=${curE}&ds_lang=en` : `https://vidsrc.sh/embed/${s.imdb_id}?ds_lang=en`;
                 let sOpt = '', eOpt = '';
                 if(isTV && s.seasons) {
                     s.seasons.filter(x => x.season_number > 0).forEach(x => sOpt += `<option value="${x.season_number}" ${x.season_number==curS?'selected':''}>Season ${x.season_number}</option>`);
